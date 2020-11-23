@@ -1,0 +1,401 @@
+#include "Phisics.h"
+
+
+namespace phisics
+{
+
+	bool aabb(glm::vec4 b1, glm::vec4 b2)
+	{
+		if (((b1.x - b2.x < b2.z)
+			&& b2.x - b1.x < b1.z
+			)
+			&& ((b1.y - b2.y < b2.w)
+				&& b2.y - b1.y < b1.w
+				)
+			)
+		{
+			return 1;
+		}
+		return 0;
+	}
+
+	// CIRCLE/RECTANGLE
+	bool circleBox(glm::vec2 c, float r, glm::vec4 b) 
+	{
+
+		float cx = c.x;
+		float cy = c.y;
+		float radius = r;
+		float rx = b.x;
+		float ry = b.y;
+		float rw = b.z;
+		float rh = b.w;
+
+		// temporary variables to set edges for testing
+		float testX = cx;
+		float testY = cy;
+
+		// which edge is closest?
+		if (cx < rx)         testX = rx;      // test left edge
+		else if (cx > rx + rw) testX = rx + rw;   // right edge
+		if (cy < ry)         testY = ry;      // top edge
+		else if (cy > ry + rh) testY = ry + rh;   // bottom edge
+
+		// get distance from closest edges
+		float distX = cx - testX;
+		float distY = cy - testY;
+		float distance = sqrt((distX * distX) + (distY * distY));
+
+		// if the distance is less than the radius, collision!
+		if (distance <= radius) {
+			return true;
+		}
+		return false;
+	}
+
+	void Entity::resolveConstrains(MapData& mapData)
+	{
+		bool upTouch = 0;
+		bool downTouch = 0;
+		bool leftTouch = 0;
+		bool rightTouch = 0;
+
+		float distance = glm::length(lastPos - pos);
+		const float BLOCK_SIZE = mapData.BLOCK_SIZE;
+
+		if (distance < BLOCK_SIZE)
+		{
+			checkCollisionBrute(pos,
+				lastPos,
+				mapData,
+				upTouch,
+				downTouch,
+				leftTouch,
+				rightTouch
+			);
+		}
+		else
+		{
+			glm::vec2 newPos = lastPos;
+			glm::vec2 delta = pos - lastPos;
+			delta = glm::normalize(delta);
+			delta *= 0.9 * BLOCK_SIZE;
+
+			do
+			{
+				newPos += delta;
+				glm::vec2 posTest = newPos;
+				checkCollisionBrute(newPos,
+					lastPos,
+					mapData,
+					upTouch,
+					downTouch,
+					leftTouch,
+					rightTouch);
+
+				if (newPos != posTest)
+				{
+					pos = newPos;
+					goto end;
+				}
+
+			} while (glm::length((newPos + delta) - pos) > 1.0f * BLOCK_SIZE);
+
+			checkCollisionBrute(pos,
+				lastPos,
+				mapData,
+				upTouch,
+				downTouch,
+				leftTouch,
+				rightTouch);
+		}
+
+	end:
+
+		//clamp the box if needed
+		//if (pos.x < 0) { pos.x = 0; }
+		//if (pos.x + dimensions.x > (mapData.w) * BLOCK_SIZE) { pos.x = ((mapData.w) * BLOCK_SIZE) - dimensions.x; }
+		void;
+
+	}
+
+	void Entity::move(glm::vec2 dir)
+	{
+
+		pos += dir;
+
+	}
+
+	void Entity::updateMove()
+	{
+
+		//if (lastPos.x - pos.x < 0)
+		//{
+		//	movingRight = -1;
+		//}
+		//else if (lastPos.x - pos.x > 0)
+		//{
+		//	movingRight = 0;
+		//}
+
+		lastPos = pos;
+
+	}
+
+	void Entity::applyGravity(float deltaTime)
+	{
+		
+		if(velocity.y != yNormalVelocity)
+		{
+			if (velocity.y < yNormalVelocity)
+			{
+				velocity.y += deltaTime * ySlowDownSpeed;
+				if (velocity.y > yNormalVelocity)
+				{
+					velocity.y = yNormalVelocity;
+				}
+			}
+			else
+			{
+				velocity.y -= deltaTime * ySlowDownSpeed;
+				if (velocity.y < yNormalVelocity)
+				{
+					velocity.y = yNormalVelocity;
+				}
+			}
+		
+		}
+
+
+	}
+
+	void Entity::applyVelocity(float deltaTime)
+	{
+		if(velocity.x > xMaxVelocity)
+		{
+			velocity.x = xMaxVelocity;
+		}
+
+		if(velocity.x < -xMaxVelocity)
+		{
+			velocity.x = -xMaxVelocity;
+		}
+
+		if(velocity.x > 0)
+		{
+			if(velocity.x != xNormalVelocity)
+			{
+				if(velocity.x < xNormalVelocity)
+				{ 
+					velocity.x += deltaTime * xSlowDownSpeed;
+					if(velocity.x > xNormalVelocity)
+					{
+						velocity.x = xNormalVelocity;
+					}
+				}
+				else
+				{
+					velocity.x -= deltaTime * xSlowDownSpeed;
+					if (velocity.x < xNormalVelocity)
+					{
+						velocity.x = xNormalVelocity;
+					}
+				}
+			}
+		
+		}else
+		{
+			if (velocity.x != -xNormalVelocity)
+			{
+				if (velocity.x < -xNormalVelocity)
+				{
+					velocity.x += deltaTime * xSlowDownSpeed;
+					if (velocity.x > -xNormalVelocity)
+					{
+						velocity.x = -xNormalVelocity;
+					}
+				}
+				else
+				{
+					velocity.x -= deltaTime * xSlowDownSpeed;
+					if (velocity.x < -xNormalVelocity)
+					{
+						velocity.x = -xNormalVelocity;
+					}
+				}
+			}
+		
+		}
+
+		if (velocity.y > yMaxVelocity)
+		{
+			velocity.y = yMaxVelocity;
+		}
+
+		if (velocity.y < -yMaxVelocity)
+		{
+			velocity.y = -yMaxVelocity;
+		}
+
+		this->pos += this->velocity * deltaTime;
+
+
+
+	}
+
+	void Entity::draw(gl2d::Renderer2D& renderer, float deltaTime, gl2d::Texture characterSprite)
+	{
+
+		//renderer.renderRectangle({ pos, dimensions }, {}, 0, characterSprite);
+		renderer.renderRectangle({ pos, dimensions }, Colors_Magenta);
+
+	}
+
+	void Entity::checkCollisionBrute(glm::vec2& pos, glm::vec2 lastPos, MapData& mapData, bool& upTouch, bool& downTouch, bool& leftTouch, bool& rightTouch)
+	{
+		glm::vec2 delta = pos - lastPos;
+		const float BLOCK_SIZE = mapData.BLOCK_SIZE;
+
+		if (
+			(pos.y < -dimensions.y)
+			|| (pos.x < -dimensions.x)
+			|| (pos.y > mapData.h * BLOCK_SIZE)
+			|| (pos.x > mapData.w * BLOCK_SIZE)
+			)
+		{
+			return;
+		}
+
+
+		glm::vec2 newPos = performCollision(mapData, { pos.x, lastPos.y }, { dimensions.x, dimensions.y }, { delta.x, 0 },
+			upTouch, downTouch, leftTouch, rightTouch);
+		pos = performCollision(mapData, { newPos.x, pos.y }, { dimensions.x, dimensions.y }, { 0, delta.y },
+			upTouch, downTouch, leftTouch, rightTouch);
+
+	}
+
+	glm::vec2 Entity::performCollision(MapData& mapData, glm::vec2 pos, glm::vec2 size, glm::vec2 delta, bool& upTouch, bool& downTouch, bool& leftTouch, bool& rightTouch)
+	{
+		int minX = 0;
+		int minY = 0;
+		int maxX = mapData.w;
+		int maxY = mapData.h;
+
+		const float BLOCK_SIZE = mapData.BLOCK_SIZE;
+
+		minX = (pos.x - abs(delta.x) -BLOCK_SIZE) / BLOCK_SIZE;
+		maxX = ceil((pos.x + abs(delta.x) + BLOCK_SIZE + size.x) / BLOCK_SIZE);
+
+		minY = (pos.y - abs(delta.y) - BLOCK_SIZE) / BLOCK_SIZE;
+		maxY = ceil((pos.y + abs(delta.y) + BLOCK_SIZE + size.y) / BLOCK_SIZE);
+
+		minX = std::max(0, minX);
+		minY = std::max(0, minY);
+		maxX = std::min(mapData.w, maxX);
+		maxY = std::min(mapData.h, maxY);
+
+		for (int y = minY; y < maxY; y++)
+			for (int x = minX; x < maxX; x++)
+			{
+				if (mapData.get(x, y).isCollidable())
+				{
+					if (aabb({ pos,dimensions }, { x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE }))
+					{
+						if (delta.x != 0)
+						{
+							if (delta.x < 0) // moving left
+							{
+								leftTouch = 1;
+								pos.x = x * BLOCK_SIZE + BLOCK_SIZE;
+								goto end;
+							}
+							else
+							{
+								rightTouch = 1;
+								pos.x = x * BLOCK_SIZE - dimensions.x;
+								goto end;
+							}
+						}
+						else
+						{
+							if (delta.y < 0) //moving up
+							{
+								upTouch = 1;
+								pos.y = y * BLOCK_SIZE + BLOCK_SIZE;
+								goto end;
+							}
+							else
+							{
+								downTouch = 1;
+								pos.y = y * BLOCK_SIZE - dimensions.y;
+								goto end;
+							}
+						}
+
+					}
+				}
+
+			}
+
+	end:
+		return pos;
+
+	}
+
+
+	void MapData::create(int w, int h, const char* d)
+	{
+		cleanup();
+
+		this->w = w;
+		this->h = h;
+
+		data = new BlockInfo[w * h];
+
+		if (d)
+		{
+			for (int i = 0; i < w * h; i++)
+			{
+				data[i].type = d[i];
+
+			}
+		}
+
+	}
+
+	BlockInfo& MapData::get(int x, int y)
+	{
+		if(x < 0 || y < 0 || x >= w || y >= h)
+		{
+			nullBlock = {};
+			return nullBlock;
+		}
+
+		return data[x + this->w * y];
+
+	}
+
+	void MapData::cleanup()
+	{
+		if (data)
+		{
+			delete[] data;
+			data = nullptr;
+		}
+
+		w = 0;
+		h = 0;
+	}
+
+	bool BlockInfo::isCollidable()
+	{
+		if(type == 'X')
+		{
+			return 1;
+		}else
+		{
+			return 0;
+		}
+	}
+
+};
