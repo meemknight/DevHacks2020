@@ -359,7 +359,7 @@ LRESULT windProc(HWND wind, UINT msg, WPARAM wp, LPARAM lp)
 			}
 		}
 		
-		if (wp == VK_OEM_3 && altWasDown & isUp)
+		if (wp == VK_OEM_3 && altWasDown && isUp)
 		{
 			consoleRunning = !consoleRunning;
 
