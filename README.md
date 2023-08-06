@@ -1,3 +1,5 @@
+Check out this game on [Youtube](https://youtu.be/YfxoecH0sXA) and [Itch.io](https://lowlevelgamedev.itch.io)
+
 [Impemented using my own engine](https://github.com/meemknight/gl2d)
 
 The name of the game is Falling Cards.
